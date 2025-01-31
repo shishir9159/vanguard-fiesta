@@ -11,7 +11,7 @@ import (
 )
 
 func main() {
-	url := os.Getenv("NATS_SERVICE")
+	url := os.Getenv("NATS_SERVICE_NAME")
 	if url == "" {
 		url = nats.DefaultURL
 	}
@@ -21,18 +21,18 @@ func main() {
 
 	js, _ := jetstream.New(nc)
 
-        // JetStream API uses context for timeouts and cancellation
+	// JetStream API uses context for timeouts and cancellation
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-        // a key-value bucket is created in NATS
+	// a key-value bucket is created in NATS
 	kv, _ := js.CreateKeyValue(ctx, jetstream.KeyValueConfig{
 		Bucket: "profiles",
 	})
 
 	kv.Put(ctx, "sue.color", []byte("blue"))
 	entry, _ := kv.Get(ctx, "sue.color")
-	
+
 	// revision number of the entries will always be tracked
 	fmt.Printf("%s @ %d -> %q\n", entry.Key(), entry.Revision(), string(entry.Value()))
 
@@ -52,7 +52,9 @@ func main() {
 	name := <-js.StreamNames(ctx).Name()
 	fmt.Printf("KV stream name: %s\n", name)
 
-	// 
+	// first token is a special reserved prefix and the second is the bucket name,
+	// and the remaining suffix is the actually key. The bucket name is inherently a namespace
+	// for all keys and thus there is no concern for conflit across buckets
 	cons, _ := js.CreateOrUpdateConsumer(ctx, "KV_profiles", jetstream.ConsumerConfig{
 		AckPolicy: jetstream.AckNonePolicy,
 	})
@@ -71,8 +73,10 @@ func main() {
 	md, _ = msg.Metadata()
 	fmt.Printf("%s @ %d -> %q\n", msg.Subject(), md.Sequence.Stream, msg.Data())
 
+	// we get immediate feedbck that a new revision exists and the provided header value DEL describes the operation
 	fmt.Printf("headers: %v\n", msg.Headers())
-
+	
+	// watcher is more convenient to monitor changes to a key rather than subscribing
 	w, _ := kv.Watch(ctx, "sue.*")
 	defer w.Stop()
 
