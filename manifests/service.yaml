@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: vanguard
+  labels:
+    app: vanguard
+spec:
+  selector:
+    app: vanguard
+  ports:
+    - port: 80
+      targetPort: 80
+      protocol: TCP
+      name: vanguard
+    - port: 50051
+      targetPort: 50051
+      protocol: TCP
+      name: vanguard-grpc
+  type: ClusterIP

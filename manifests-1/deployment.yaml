@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vanguard
+  namespace: default
+  labels:
+    app: vanguard
+spec:
+  selector:
+    matchLabels:
+      app: vanguard
+  template:
+    metadata:
+      labels:
+        app: vanguard
+    spec:
+      containers:
+# TODO: update maxSurge value to keep max one instance
+# TODO: update the image name in readme
+        - image: quay.io/klovercloud/vanguard:latest
+          imagePullPolicy: Always
+          name: vanguard
+          envFrom:
+            - configMapRef:
+                name: vanguard
+          ports:
+            - containerPort: 80
+              name: vanguard
+            - containerPort: 50051
+              name: vanguard-grpc
+          livenessProbe:
+            failureThreshold: 10
+            httpGet:
+              host: 127.0.0.1
+              httpHeaders:
+                - name: shuttle
+                  value: "launched"
+              path: /livez
+              port: vanguard
+              scheme: HTTP
+            periodSeconds: 300
+            successThreshold: 1
+            timeoutSeconds: 5
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              host: 127.0.0.1
+              httpHeaders:
+                - name: sanity
+                  value: "checked"
+              path: /readyz
+              port: vanguard
+              scheme: HTTP
+            periodSeconds: 300
+            successThreshold: 1
+            timeoutSeconds: 15
+      terminationGracePeriodSeconds: 60
+      schedulerName: default-scheduler
+#      TODO: serviceAccount
+      serviceAccountName: vanguard
