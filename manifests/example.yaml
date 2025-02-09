@@ -20,40 +20,9 @@ spec:
         - image: quay.io/klovercloud/vanguard-test:latest
           imagePullPolicy: Always
           name: vanguard-test
-          envFrom:
-            - configMapRef:
-                name: vanguard-test
           ports:
             - containerPort: 80
               name: vanguard-test
-            - containerPort: 50051
-              name: vanguard-test-grpc
-          livenessProbe:
-            failureThreshold: 10
-            httpGet:
-              host: 127.0.0.1
-              httpHeaders:
-                - name: shuttle
-                  value: "launched"
-              path: /livez
-              port: vanguard-test
-              scheme: HTTP
-            periodSeconds: 300
-            successThreshold: 1
-            timeoutSeconds: 5
-          readinessProbe:
-            failureThreshold: 3
-            httpGet:
-              host: 127.0.0.1
-              httpHeaders:
-                - name: sanity
-                  value: "checked"
-              path: /readyz
-              port: vanguard-test
-              scheme: HTTP
-            periodSeconds: 300
-            successThreshold: 1
-            timeoutSeconds: 15
       terminationGracePeriodSeconds: 60
       schedulerName: default-scheduler
       serviceAccountName: vanguard
