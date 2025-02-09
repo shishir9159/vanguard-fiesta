@@ -17,7 +17,12 @@ func main() {
 	}
 
 	nc, _ := nats.Connect(url)
-	defer nc.Drain()
+	defer func(nc *nats.Conn) {
+		err := nc.Drain()
+		if err != nil {
+
+		}
+	}(nc)
 
 	js, _ := jetstream.New(nc)
 
@@ -30,21 +35,35 @@ func main() {
 		Bucket: "profiles",
 	})
 
-	kv.Put(ctx, "sue.color", []byte("blue"))
+	put, err := kv.Put(ctx, "sue.color", []byte("blue"))
+	fmt.Println(put)
+	if err != nil {
+		return
+	}
 	entry, _ := kv.Get(ctx, "sue.color")
 
 	// revision number of the entries will always be tracked
 	fmt.Printf("%s @ %d -> %q\n", entry.Key(), entry.Revision(), string(entry.Value()))
 
-	kv.Put(ctx, "sue.color", []byte("green"))
+	put, err = kv.Put(ctx, "sue.color", []byte("green"))
+	fmt.Println(put)
+	if err != nil {
+		return
+	}
+
 	entry, _ = kv.Get(ctx, "sue.color")
 	fmt.Printf("%s @ %d -> %q\n", entry.Key(), entry.Revision(), string(entry.Value()))
 
-	_, err := kv.Update(ctx, "sue.color", []byte("red"), 1)
+	_, err = kv.Update(ctx, "sue.color", []byte("red"), 1)
 	fmt.Printf("expected error: %s\n", err)
 
 	// revision numbers allow safe optimistic concurrency control per entries
-	kv.Update(ctx, "sue.color", []byte("red"), 2)
+	update, err := kv.Update(ctx, "sue.color", []byte("red"), 2)
+	fmt.Println(update)
+	if err != nil {
+		return
+	}
+
 	entry, _ = kv.Get(ctx, "sue.color")
 	fmt.Printf("%s @ %d -> %q\n", entry.Key(), entry.Revision(), string(entry.Value()))
 
@@ -63,24 +82,40 @@ func main() {
 	md, _ := msg.Metadata()
 	fmt.Printf("%s @ %d -> %q\n", msg.Subject(), md.Sequence.Stream, string(msg.Data()))
 
-	kv.Put(ctx, "sue.color", []byte("yellow"))
+	put, err = kv.Put(ctx, "sue.color", []byte("yellow"))
+	fmt.Println(put)
+	if err != nil {
+		return
+	}
 	msg, _ = cons.Next()
 	md, _ = msg.Metadata()
 	fmt.Printf("%s @ %d -> %q\n", msg.Subject(), md.Sequence.Stream, string(msg.Data()))
 
-	kv.Delete(ctx, "sue.color")
+	err = kv.Delete(ctx, "sue.color")
+	if err != nil {
+		return
+	}
 	msg, _ = cons.Next()
 	md, _ = msg.Metadata()
 	fmt.Printf("%s @ %d -> %q\n", msg.Subject(), md.Sequence.Stream, msg.Data())
 
-	// we get immediate feedbck that a new revision exists and the provided header value DEL describes the operation
+	// we get immediate feedback that a new revision exists and the provided header value DEL describes the operation
 	fmt.Printf("headers: %v\n", msg.Headers())
-	
+
 	// watcher is more convenient to monitor changes to a key rather than subscribing
 	w, _ := kv.Watch(ctx, "sue.*")
-	defer w.Stop()
+	defer func(w jetstream.KeyWatcher) {
+		er := w.Stop()
+		if er != nil {
 
-	kv.Put(ctx, "sue.color", []byte("purple"))
+		}
+	}(w)
+
+	put, err = kv.Put(ctx, "sue.color", []byte("purple"))
+	fmt.Println(put)
+	if err != nil {
+		return
+	}
 
 	kve := <-w.Updates()
 	fmt.Printf("%s @ %d -> %q (op: %s)\n", kve.Key(), kve.Revision(), string(kve.Value()), kve.Operation())
@@ -90,7 +125,11 @@ func main() {
 	kve = <-w.Updates()
 	fmt.Printf("%s @ %d -> %q (op: %s)\n", kve.Key(), kve.Revision(), string(kve.Value()), kve.Operation())
 
-	kv.Put(ctx, "sue.food", []byte("pizza"))
+	put, err = kv.Put(ctx, "sue.food", []byte("pizza"))
+	fmt.Println(put)
+	if err != nil {
+		return
+	}
 
 	kve = <-w.Updates()
 	fmt.Printf("%s @ %d -> %q (op: %s)\n", kve.Key(), kve.Revision(), string(kve.Value()), kve.Operation())
