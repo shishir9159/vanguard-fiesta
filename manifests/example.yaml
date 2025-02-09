@@ -1,33 +1,33 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: vanguard
+  name: vanguard-test
   namespace: default
   labels:
-    app: vanguard
+    app: vanguard-test
 spec:
   selector:
     matchLabels:
-      app: vanguard
+      app: vanguard-test
   template:
     metadata:
       labels:
-        app: vanguard
+        app: vanguard-test
     spec:
       containers:
-# TODO: update maxSurge value to keep max one instance
-# TODO: update the image name in readme
-        - image: quay.io/klovercloud/vanguard:latest
+        # TODO: update maxSurge value to keep max one instance
+        # TODO: update the image name in readme
+        - image: quay.io/klovercloud/vanguard-test:latest
           imagePullPolicy: Always
-          name: vanguard
+          name: vanguard-test
           envFrom:
             - configMapRef:
-                name: vanguard
+                name: vanguard-test
           ports:
             - containerPort: 80
-              name: vanguard
+              name: vanguard-test
             - containerPort: 50051
-              name: vanguard-grpc
+              name: vanguard-test-grpc
           livenessProbe:
             failureThreshold: 10
             httpGet:
@@ -36,7 +36,7 @@ spec:
                 - name: shuttle
                   value: "launched"
               path: /livez
-              port: vanguard
+              port: vanguard-test
               scheme: HTTP
             periodSeconds: 300
             successThreshold: 1
@@ -49,12 +49,11 @@ spec:
                 - name: sanity
                   value: "checked"
               path: /readyz
-              port: vanguard
+              port: vanguard-test
               scheme: HTTP
             periodSeconds: 300
             successThreshold: 1
             timeoutSeconds: 15
       terminationGracePeriodSeconds: 60
       schedulerName: default-scheduler
-#      TODO: serviceAccount
       serviceAccountName: vanguard

@@ -45,12 +45,15 @@ func DownloadYAML(url string) ([]byte, error) {
 
 // ApplyYAML applies a YAML manifest to the Kubernetes cluster
 func ApplyYAML(yamlContent []byte) error {
-	// Create Kubernetes config
-	config, err := rest.InClusterConfig() // Use incluster config (inside a pod)
+
+	config, err := rest.InClusterConfig()
 	if err != nil {
-		config, err = rest.InClusterConfig() // Use default kubeconfig if running locally
+		kubeConfigPath := clientcmd.NewDefaultClientConfigLoadingRules().GetDefaultFilename()
+		config, err = clientcmd.BuildConfigFromFlags("", kubeConfigPath)
 		if err != nil {
-			return fmt.Errorf("failed to get Kubernetes config: %v", err)
+			fmt.Errorf(
+				"unable to get kubeconfig from %s: %v",
+				kubeConfigPath, err)
 		}
 	}
 
@@ -101,7 +104,7 @@ func ApplyYAML(yamlContent []byte) error {
 		if err != nil {
 			return fmt.Errorf("failed to create resource: %v", err)
 		}
-		log.Println("Resource created successfully")
+		log.Println("resource created successfully")
 	}
 
 	return nil
@@ -121,4 +124,8 @@ func main() {
 	fmt.Println("Downloaded YAML content:")
 	fmt.Println(string(yamlData))
 
+	err = ApplyYAML(yamlData)
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+	}
 }
